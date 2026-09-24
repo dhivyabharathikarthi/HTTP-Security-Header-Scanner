@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Security Header Scanner</title>
+    <meta name="description" content="A defensive cybersecurity tool that inspects, evaluates, and scores HTTP security headers, cookie flags, and redirect chains.">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="soc-container">
+        <!-- Header -->
+        <header class="soc-header">
+            <div class="brand">
+                <div class="shield-icon">🛡️</div>
+                <div>
+                    <h1>HTTP SECURITY HEADER SCANNER</h1>
+                    <p class="subtitle">Defensive Security Posture & Configuration Analyzer</p>
+                </div>
+            </div>
+            <div class="nav-actions">
+                <button id="btn-view-history" class="btn btn-outline">📜 Scan History</button>
+                <a href="/docs" target="_blank" class="btn btn-outline">📖 API Docs</a>
+            </div>
+        </header>
+
+        <!-- Scanning Input Section -->
+        <section class="scan-bar-card">
+            <form id="scan-form" class="scan-form">
+                <div class="input-wrapper">
+                    <span class="url-icon">🌐</span>
+                    <input 
+                        type="text" 
+                        id="target-url" 
+                        placeholder="Enter target URL (e.g., https://example.com or example.com)" 
+                        required 
+                        autocomplete="off"
+                    />
+                </div>
+                <button type="submit" id="btn-scan" class="btn btn-primary">
+                    <span class="btn-text">⚡ Scan Target</span>
+                    <span class="spinner" style="display: none;"></span>
+                </button>
+            </form>
+            <div class="sample-targets">
+                <span>Quick Test:</span>
+                <button class="sample-btn" data-url="https://github.com">github.com</button>
+                <button class="sample-btn" data-url="https://cloudflare.com">cloudflare.com</button>
+                <button class="sample-btn" data-url="https://google.com">google.com</button>
+                <button class="sample-btn" data-url="http://httpbin.org">httpbin.org</button>
+            </div>
+            <div id="scan-error" class="alert alert-error" style="display: none;"></div>
+        </section>
+
+        <!-- Main Dashboard View -->
+        <main id="scan-dashboard" style="display: none;">
+            <!-- Top Target Metrics Bar -->
+            <div class="target-meta-grid">
+                <div class="meta-card">
+                    <span class="meta-label">TARGET URL</span>
+                    <span class="meta-value" id="meta-target">-</span>
+                </div>
+                <div class="meta-card">
+                    <span class="meta-label">FINAL DESTINATION</span>
+                    <span class="meta-value" id="meta-final">-</span>
+                </div>
+                <div class="meta-card">
+                    <span class="meta-label">HTTP STATUS</span>
+                    <span class="meta-value status-badge" id="meta-status">-</span>
+                </div>
+                <div class="meta-card">
+                    <span class="meta-label">HTTPS ENCRYPTED</span>
+                    <span class="meta-value" id="meta-https">-</span>
+                </div>
+                <div class="meta-card">
+                    <span class="meta-label">REDIRECT HOPS</span>
+                    <span class="meta-value" id="meta-redirects">0</span>
+                </div>
+            </div>
+
+            <!-- Score Summary Row -->
+            <div class="score-card">
+                <div class="score-badge-circle">
+                    <div class="score-number" id="score-text">0 / 11</div>
+                    <div class="score-percent" id="score-percentage">0%</div>
+                </div>
+                <div class="score-content">
+                    <h2>Security Configuration Score</h2>
+                    <p class="score-disclaimer">
+                        This score is a weighted measure of checked HTTP security headers and cookie flags, not an exhaustive assessment of overall application security.
+                    </p>
+                    <div class="score-progress-bar">
+                        <div class="score-progress-fill" id="score-bar" style="width: 0%;"></div>
+                    </div>
+                    <div class="score-actions">
+                        <button id="btn-export-json" class="btn btn-sm btn-outline">📥 Export JSON Report</button>
+                        <button id="btn-copy-summary" class="btn btn-sm btn-outline">📋 Copy Summary</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Redirect Chain Visualizer (if any) -->
+            <div id="redirect-section" class="card" style="display: none;">
+                <h3>🔀 Redirect Chain Analysis</h3>
+                <div id="redirect-chain-flow" class="redirect-chain-flow"></div>
+            </div>
+
+            <!-- Header Findings Grid -->
+            <div class="card">
+                <div class="card-header-flex">
+                    <h3>🛡️ Evaluated Security Headers</h3>
+                    <div class="filter-pills">
+                        <button class="pill active" data-filter="all">All</button>
+                        <button class="pill" data-filter="PASS">Pass</button>
+                        <button class="pill" data-filter="WARN">Warnings</button>
+                    </div>
+                </div>
+                <div id="headers-list" class="findings-grid"></div>
+            </div>
+
+            <!-- Cookie Security Analysis -->
+            <div class="card">
+                <h3>🍪 Cookie Security Analysis</h3>
+                <p class="section-desc">Inspects security attributes on all collected <code>Set-Cookie</code> headers without revealing private cookie values.</p>
+                <div class="table-responsive">
+                    <table class="soc-table">
+                        <thead>
+                            <tr>
+                                <th>Cookie Name</th>
+                                <th>Secure</th>
+                                <th>HttpOnly</th>
+                                <th>SameSite</th>
+                                <th>Path / Domain</th>
+                                <th>Status & Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cookie-table-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Raw Response Headers -->
+            <div class="card">
+                <details>
+                    <summary class="details-summary">📄 View Raw Sanitized Response Headers</summary>
+                    <pre class="code-block" id="raw-headers-block"></pre>
+                </details>
+            </div>
+        </main>
+
+        <!-- History Modal / Drawer -->
+        <div id="history-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>📜 Scan History</h2>
+                    <button id="btn-close-history" class="btn-close">&times;</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="soc-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Target</th>
+                                <th>Status</th>
+                                <th>HTTPS</th>
+                                <th>Score</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <footer class="soc-footer">
+            <p>Defensive Cybersecurity Tool — Strictly for authorized domains and self-owned infrastructure.</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

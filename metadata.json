@@ -1,0 +1,6 @@
+{
+  "name": "HTTP Security Header Scanner",
+  "description": "A defensive cybersecurity tool that inspects, evaluates, and scores HTTP security headers, cookie flags, and redirect chains with actionable hardening advice.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
